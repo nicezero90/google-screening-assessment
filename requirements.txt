@@ -1,5 +1,10 @@
-# Basic dependencies - will be updated as we add more components
+# Section A - Python Coding Dependencies
+# No external dependencies required for basic Python questions
+
+# Testing
 pytest>=7.0.0
+
+# Section B - AI Agent Dependencies (will be added later)
 pandas>=1.5.0
 numpy>=1.21.0
-sqlite3
+# sqlite3 is built into Python standard library
