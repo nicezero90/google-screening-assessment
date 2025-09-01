@@ -21,7 +21,10 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from database_simple import ReturnsDatabase
 from coordinator.mcp_coordinator import AgentResponse
-from excel_generator import SimpleExcelGenerator
+try:
+    from .excel_generator import SimpleExcelGenerator
+except ImportError:
+    from excel_generator import SimpleExcelGenerator
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

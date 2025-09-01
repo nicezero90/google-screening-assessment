@@ -1,0 +1,32 @@
+{
+  "name": "Returns & Warranty Insights",
+  "description": "AI-powered returns and warranty analysis system with GPT-like interface",
+  "repository": "https://github.com/nicezero90/google-screening-assessment",
+  "keywords": ["python", "flask", "ai", "nlp", "returns", "analytics"],
+  "image": "heroku/python",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": {
+      "description": "Flask environment",
+      "value": "production"
+    },
+    "SECRET_KEY": {
+      "description": "Secret key for session management",
+      "generator": "secret"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "addons": [],
+  "scripts": {
+    "postdeploy": "echo 'Deployment completed successfully'"
+  }
+}
