@@ -1,0 +1,21 @@
+id,product_name,category,brand,purchase_location,purchase_price,purchase_date,return_date,return_reason,customer_id,warranty_status
+1,iPhone 14 Pro,Electronics,Apple,Apple Store Taipei 101,35000,2024-01-15,2024-01-22,Screen cracked out of the box,CUST001,Under Warranty
+2,iPhone 14,Electronics,Apple,Apple Store Xinyi,28000,2024-01-10,2024-01-17,Battery not holding charge,CUST002,Under Warranty
+3,MacBook Pro 14,Electronics,Apple,Apple Store Taipei 101,65000,2023-12-20,2024-01-05,Keyboard keys sticking,CUST003,Under Warranty
+4,Apple TV 4K,Electronics,Apple,Apple Store Taipei 101,6000,2024-01-08,2024-01-15,USB port not working,CUST004,Under Warranty
+5,iPhone 13,Electronics,Apple,Apple Store Xinyi,25000,2024-01-12,2024-01-19,Screen flickering issue,CUST005,Under Warranty
+6,iPad Air,Electronics,Apple,Online Store,20000,2023-12-25,2024-01-08,Touch screen unresponsive,CUST006,Under Warranty
+7,AirPods Pro,Electronics,Apple,Apple Store Taipei 101,8000,2024-01-20,2024-01-27,Left earpiece not working,CUST007,Under Warranty
+8,iPhone 14 Plus,Electronics,Apple,Apple Store Xinyi,32000,2024-01-05,2024-01-12,Camera not focusing properly,CUST008,Under Warranty
+9,Apple Watch Series 8,Electronics,Apple,Apple Store Taipei 101,15000,2023-12-30,2024-01-10,Band causing skin irritation,CUST009,Under Warranty
+10,iPhone 14 Pro Max,Electronics,Apple,Apple Store Xinyi,40000,2024-01-18,2024-01-25,Face ID not working,CUST010,Under Warranty
+11,MacBook Air M2,Electronics,Apple,Online Store,38000,2023-12-15,2024-01-02,Screen has dead pixels,CUST011,Under Warranty
+12,iPhone 13 Pro,Electronics,Apple,Apple Store Taipei 101,32000,2024-01-22,2024-01-29,Phone overheating,CUST012,Under Warranty
+13,iPad Pro,Electronics,Apple,Apple Store Xinyi,35000,2024-01-03,2024-01-10,Charging port loose,CUST013,Under Warranty
+14,iPhone 14,Electronics,Apple,Apple Store Taipei 101,28000,2024-01-25,2024-02-01,Screen cracked out of the box,CUST014,Under Warranty
+15,Apple TV HD,Electronics,Apple,Online Store,4500,2024-01-01,2024-01-08,Remote not responding,CUST015,Under Warranty
+16,iPhone 12,Electronics,Apple,Apple Store Xinyi,22000,2023-11-20,2023-12-15,Battery draining quickly,CUST016,Expired
+17,MacBook Pro 16,Electronics,Apple,Apple Store Taipei 101,85000,2023-12-10,2024-01-20,Fan making loud noise,CUST017,Under Warranty
+18,iPhone 14 Pro,Electronics,Apple,Apple Store Xinyi,35000,2024-02-01,2024-02-08,Screen cracked out of the box,CUST018,Under Warranty
+19,AirPods Max,Electronics,Apple,Apple Store Taipei 101,18000,2024-01-15,2024-01-22,Audio cutting out,CUST019,Under Warranty
+20,iPhone 13 Mini,Electronics,Apple,Online Store,24000,2024-01-30,2024-02-06,Home button not working,CUST020,Under Warranty
