@@ -165,13 +165,19 @@ conversation_manager = ConversationManager()
 
 @app.route('/')
 def index():
-    """Main chat interface."""
+    """Main chat interface - Apple style ChatGPT interface."""
+    return send_file('test.html')
+
+
+@app.route('/welcome')
+def welcome():
+    """Welcome page with feature overview."""
     return render_template('index.html')
 
 
 @app.route('/test')
 def test():
-    """Simple test chat interface."""
+    """Simple test chat interface (same as main)."""
     return send_file('test.html')
 
 
