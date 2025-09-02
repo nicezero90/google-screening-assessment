@@ -116,10 +116,18 @@ class ConversationManager:
             else:
                 response = coordinator.handle_unknown(message)
             
+            # Add Try suggestions to enhance user experience
+            try_suggestions = self._generate_try_suggestions(user_intent, response, conversation_history)
+            
+            # Append Try suggestions to response text
+            enhanced_message = response.response_text
+            if try_suggestions:
+                enhanced_message += f"\n\n{try_suggestions}"
+            
             # Format response for web interface
             response_data = {
                 'success': response.success,
-                'message': response.response_text,
+                'message': enhanced_message,
                 'agent': response.agent_name,
                 'follow_up_needed': response.follow_up_needed,
                 'data': response.data or {},
@@ -157,6 +165,66 @@ class ConversationManager:
             messages = self.sessions[session_id]['messages']
             return messages[-limit:] if limit else messages
         return []
+    
+    def _generate_try_suggestions(self, user_intent, agent_response, conversation_history: list = None) -> str:
+        """Generate Try suggestions based on current conversation context."""
+        from coordinator.mcp_coordinator import IntentType
+        
+        suggestions = []
+        
+        if user_intent.intent_type == IntentType.GREETING:
+            # Don't add Try suggestions for data analysis greetings (to match problem statement exactly)
+            if "data analysis" in user_intent.raw_message.lower():
+                return ""
+            suggestions = [
+                '"I want to return something"',
+                '"How many returns were there this month?"',
+                '"Generate an Excel report for me"'
+            ]
+        
+        elif user_intent.intent_type == IntentType.RETURN_SUBMISSION:
+            if agent_response.follow_up_needed:
+                # During return process
+                if 'product' in agent_response.response_text.lower():
+                    suggestions = ['"Laptop"', '"Camera"', '"Headphones"']
+                elif 'where' in agent_response.response_text.lower():
+                    suggestions = ['"SoMa Market"', '"Harbor Point"', '"Online store"']
+                elif 'price' in agent_response.response_text.lower() or 'cost' in agent_response.response_text.lower():
+                    suggestions = ['"I paid $500"', '"About 300 dollars"', '"It was expensive"']
+            else:
+                # Return completed
+                suggestions = [
+                    '"How many similar returns were there?"',
+                    '"Generate a return report"',
+                    '"What are common return reasons?"'
+                ]
+        
+        elif user_intent.intent_type == IntentType.DATA_ANALYSIS:
+            suggestions = [
+                '"What are the most returned products?"',
+                '"Show trends for the past month"',
+                '"Which stores have most returns?"'
+            ]
+        
+        elif user_intent.intent_type == IntentType.REPORT_GENERATION:
+            suggestions = [
+                '"Analyze return patterns"',
+                '"What insights do you see?"',
+                '"How can we reduce returns?"'
+            ]
+        
+        else:
+            suggestions = [
+                '"I need help with a return"',
+                '"Show me return statistics"',
+                '"What can you help me with?"'
+            ]
+        
+        if suggestions:
+            try_text = "Try: " + ", ".join(suggestions)
+            return try_text
+        
+        return ""
 
 
 # Initialize conversation manager
