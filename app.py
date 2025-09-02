@@ -163,64 +163,90 @@ class ConversationManager:
         return []
     
     def _generate_try_suggestions(self, user_intent, agent_response, conversation_history: list = None) -> list:
-        """Generate contextual Try suggestions based on conversation flow."""
+        """
+        Generate smart Try suggestions that guide users through complete problem statement scenarios.
+        Each suggestion is the exact next user prompt from the problem examples.
+        """
         from coordinator.mcp_coordinator import IntentType
         
-        # For scenario-based progressive suggestions following problem statement examples
+        # Analyze conversation context to provide perfect next steps
+        response_text = agent_response.response_text.lower()
         
-        if user_intent.intent_type == IntentType.GREETING:
-            if "data analysis" in user_intent.raw_message.lower():
-                # Data analysis scenario - suggest next step from problem statement
-                return ["I'd like to know how many iPhones were returned in the past 2 weeks and whether the frequency has increased over the same timeframe."]
-            elif "return" in user_intent.raw_message.lower():
-                # Return scenario - suggest next step from problem statement  
-                return ["I want to return an Apple TV that was bought last week at Taipei 101 Apple store. The Apple TV's usb port is not working."]
-            else:
-                # General greeting
-                return [
-                    "Hi, how are you? I'd like to return something.",
-                    "Hi, how are you? I'd like to perform some data analysis on the items returned.",
-                    "Generate an Excel report for me"
-                ]
+        # Case 1: Initial greeting responses
+        if "sure, please provide me with the details" in response_text:
+            # User started return scenario - suggest the exact next prompt from problem statement
+            return ["I want to return an Apple TV that was bought last week at Taipei 101 Apple store. The Apple TV's usb port is not working."]
         
-        elif user_intent.intent_type == IntentType.RETURN_SUBMISSION:
-            if agent_response.follow_up_needed:
-                # During return process - suggest specific answers
-                if 'price' in agent_response.response_text.lower():
-                    return ["I bought it for 3000 NTD after 10% discount."]
-                elif 'product' in agent_response.response_text.lower():
-                    return ["I want to return an Apple TV that was bought last week at Taipei 101 Apple store. The Apple TV's usb port is not working."]
-                else:
-                    return ["Apple Store Taipei 101", "Online store", "SoMa Market"]
-            else:
-                # Return completed - suggest natural next steps
-                return [
-                    "How many similar returns were there?",
-                    "I'd like to perform some data analysis on the items returned.", 
-                    "Generate a return analysis report"
-                ]
+        elif "sure, what information would you like" in response_text:
+            # User started data analysis - suggest exact next prompt from problem statement  
+            return ["I'd like to know how many iPhones were returned in the past 2 weeks and whether the frequency has increased over the same timeframe."]
         
-        elif user_intent.intent_type == IntentType.DATA_ANALYSIS:
-            # After data analysis - suggest report generation from problem statement
+        # Case 2: Return process flow
+        elif "sorry to hear that" in response_text and "how much" in response_text:
+            # System asked for price - suggest exact problem statement response
+            return ["I bought it for 3000 NTD after 10% discount."]
+        
+        elif "what product" in response_text or "which item" in response_text:
+            # System asking for product - suggest from real CSV data
             return [
-                "thanks for the insights. Please generate an excel report for me to download that displays the information you mentioned.",
-                "What are the most common return reasons?",
-                "Show me trends for cameras"
+                "I want to return a Camera that I bought online for 650 dollars, it's not working properly",
+                "Laptop from SoMa Market for 1000 dollars, screen is broken", 
+                "Headphones from Harbor Point for 120 dollars, audio cutting out"
             ]
         
-        elif user_intent.intent_type == IntentType.REPORT_GENERATION:
-            # After report generation
+        elif "where did you" in response_text and "purchase" in response_text:
+            # System asking for location - suggest real store names from CSV
+            return ["SoMa Market", "Harbor Point", "Greenfield Center"]
+        
+        elif "how much" in response_text or "price" in response_text:
+            # System asking for price - suggest realistic amounts
             return [
-                "How can we reduce returns based on this data?",
-                "I'd like to return something new",
-                "What are the key insights from this report?"
+                "I paid 650 dollars", 
+                "About 120 dollars",
+                "It cost me 500 dollars"
+            ]
+        
+        # Case 3: After data analysis
+        elif "13" in response_text and "iphone" in response_text and "15,000" in response_text:
+            # System provided iPhone analysis - suggest exact report request from problem
+            return ["thanks for the insights. Please generate an excel report for me to download that displays the information you mentioned."]
+        
+        elif "camera" in response_text and "returns" in response_text:
+            # After camera analysis
+            return [
+                "Please generate an excel report for camera returns",
+                "What are the main reasons for camera returns?",
+                "thanks for the insights. Please generate an excel report for me to download"
+            ]
+        
+        # Case 4: After report generation  
+        elif "click here to download" in response_text:
+            # Report generated - suggest starting new scenarios
+            return [
+                "Hi, how are you? I'd like to return something.",
+                "How many headphones were returned this month?",
+                "What are the top 3 return reasons?"
+            ]
+        
+        # Default cases based on intent
+        elif user_intent.intent_type == IntentType.GREETING:
+            return [
+                "Hi, how are you? I'd like to return something.",
+                "Hi, how are you? I'd like to perform some data analysis on the items returned."
+            ]
+        
+        elif user_intent.intent_type == IntentType.DATA_ANALYSIS:
+            return [
+                "How many cameras were returned in the past month?",
+                "What are the most common return reasons?",
+                "Generate an Excel report for me"
             ]
         
         else:
             return [
                 "Hi, how are you? I'd like to return something.",
-                "Hi, how are you? I'd like to perform some data analysis on the items returned.",
-                "What can you help me with?"
+                "How many returns were there this month?",
+                "Generate an Excel report for me"
             ]
 
 
