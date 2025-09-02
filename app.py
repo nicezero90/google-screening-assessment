@@ -174,7 +174,7 @@ class ConversationManager:
         
         if user_intent.intent_type == IntentType.GREETING:
             # Don't add Try suggestions for data analysis greetings (to match problem statement exactly)
-            if "data analysis" in user_intent.raw_message.lower():
+            if "data analysis" in user_intent.raw_message.lower() and agent_response.agent_name == "coordinator":
                 return ""
             suggestions = [
                 '"I want to return something"',
