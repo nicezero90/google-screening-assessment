@@ -1,0 +1,12 @@
+run = "cd section-b-ai-agent && python app.py"
+modules = ["python-3.12"]
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "cd section-b-ai-agent && python app.py"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

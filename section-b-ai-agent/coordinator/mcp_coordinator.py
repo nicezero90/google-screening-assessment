@@ -43,6 +43,7 @@ class AgentResponse:
     data: Optional[Dict[str, Any]] = None
     follow_up_needed: bool = False
     agent_name: str = ""
+    suggested_responses: Optional[List[str]] = None  # Smart suggestion bubbles
 
 
 class MCPCoordinator:
@@ -67,14 +68,26 @@ class MCPCoordinator:
                 r'\b(return|returning|want to return|need to return|like to return)\b',
                 r'\b(refund|exchange|send back|give back)\b',
                 r'\b(defective|broken|not working|faulty|problem with)\b',
-                r'\b(bought|purchased|got).*\b(return|problem|issue)\b'
+                r'\b(bought|purchased|got).*\b(return|problem|issue)\b',
+                # Enhanced natural language patterns
+                r'\b(not (happy|satisfied)|disappointed|regret buying|wrong (item|product|color|size))\b',
+                r'\b(doesn\'t work|doesn\'t function|stop(ped)? working)\b',
+                r'\b(change my mind|don\'t (want|need) (this|it)|no longer (want|need))\b',
+                r'\b(receipt|warranty|guarantee).*\b(return|refund)\b',
+                r'\b(mistake|error|wrong).*\b(purchase|order|buy)\b'
             ],
             IntentType.DATA_ANALYSIS: [
                 r'\b(analysis|analyze|data analysis|insights|statistics)\b',
                 r'\b(how many|count|total|number of)\b',
                 r'\b(trend|frequency|pattern|increase|decrease)\b',
                 r'\b(past|last|previous)\s+\d+\s+(day|week|month)s?\b',
-                r'\b(performance|metrics|dashboard|summary)\b'
+                r'\b(performance|metrics|dashboard|summary)\b',
+                # Enhanced casual inquiry patterns
+                r'\b(what\'s (the|our)|tell me about|show me)\b',
+                r'\b(any (trends|patterns|issues)|common (problems|issues))\b',
+                r'\b((most|least) (popular|common|frequent))\b',
+                r'\b(which (products?|items?)|what (products?|items?))\b',
+                r'\b(why (are|do)|what (causes?|reasons?))\b'
             ],
             IntentType.REPORT_GENERATION: [
                 r'\b(report|generate report|create report|download)\b',
@@ -89,19 +102,20 @@ class MCPCoordinator:
         
         # Data extraction patterns
         self.extraction_patterns = {
-            'price': r'\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:ntd|dollars?|usd)?',
+            'price': r'(?:cost|paid|price|bought.*for|for)\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:ntd|dollars?|usd)',
             'discount': r'(\d+)%\s*(?:off|discount)',
             'time_period': r'(?:past|last|previous)\s+(\d+)\s+(day|week|month)s?',
             'product_name': r'\b(iphone|macbook|ipad|apple tv|airpods|apple watch)\s*[\w\s]*',
             'location': r'(?:at|from|in)\s+([\w\s]+(?:store|shop|mall|101)[\w\s]*)',
         }
     
-    def analyze_intent(self, message: str) -> UserIntent:
+    def analyze_intent(self, message: str, conversation_history: List[Dict] = None) -> UserIntent:
         """
-        Analyze user message to determine intent and extract relevant data.
+        Analyze user message to determine intent and extract relevant data with context awareness.
         
         Args:
             message: User's natural language input
+            conversation_history: Previous conversation context
             
         Returns:
             UserIntent object with classified intent and extracted data
@@ -109,6 +123,10 @@ class MCPCoordinator:
         message_lower = message.lower()
         intent_scores = {}
         extracted_data = {}
+        
+        # Add context-aware processing
+        if conversation_history:
+            extracted_data.update(self._extract_context_from_history(message, conversation_history))
         
         # Calculate intent scores
         for intent_type, patterns in self.intent_patterns.items():
@@ -125,15 +143,22 @@ class MCPCoordinator:
         
         # Determine primary intent
         if not intent_scores:
-            primary_intent = IntentType.UNKNOWN
-            confidence = 0.0
+            # Check if this might be a follow-up response based on context
+            if extracted_data.get('is_followup_response'):
+                primary_intent = IntentType.RETURN_SUBMISSION
+                confidence = 0.8  # High confidence for follow-up responses
+            else:
+                primary_intent = IntentType.UNKNOWN
+                confidence = 0.0
         else:
             primary_intent = max(intent_scores.keys(), key=lambda k: intent_scores[k])
             confidence = intent_scores[primary_intent]
         
         # Extract relevant data based on intent
         if primary_intent in [IntentType.RETURN_SUBMISSION, IntentType.DATA_ANALYSIS]:
-            extracted_data = self._extract_data_from_message(message)
+            data_from_message = self._extract_data_from_message(message)
+            # Merge context data with extracted data
+            extracted_data.update(data_from_message)
         
         return UserIntent(
             intent_type=primary_intent,
@@ -191,7 +216,93 @@ class MCPCoordinator:
             original_price = purchase_price / (1 - discount / 100)
             extracted['original_price'] = round(original_price, 2)
         
+        # Handle "after X% discount" pattern specifically
+        discount_after_match = re.search(r'(\d+).*after\s+(\d+)%\s*discount', message.lower())
+        if discount_after_match:
+            discounted_price = float(discount_after_match.group(1))
+            discount_percent = float(discount_after_match.group(2))
+            original_price = discounted_price / (1 - discount_percent / 100)
+            extracted['purchase_price'] = discounted_price
+            extracted['discount_percent'] = discount_percent  
+            extracted['original_price'] = round(original_price, 2)
+        
         return extracted
+    
+    def _extract_context_from_history(self, message: str, history: List[Dict]) -> Dict[str, Any]:
+        """Extract contextual information from conversation history."""
+        context_data = {}
+        message_lower = message.lower()
+        
+        # Look for reference words that need context resolution
+        reference_patterns = {
+            'product_references': [
+                r'\b(that|this|it|them|those|these)\b',
+                r'\b(the (item|product|device|thing))\b'
+            ],
+            'quantity_references': [
+                r'\b(how many|count|number of)\s+(that|those|them|it)\b',
+                r'\b(those|these|them)\s+(were|are|have been)\b'
+            ]
+        }
+        
+        # Check if message contains references that need context
+        has_references = any(
+            re.search(pattern, message_lower) 
+            for patterns in reference_patterns.values() 
+            for pattern in patterns
+        )
+        
+        # Also check if this might be a response to a system question
+        is_simple_product_name = any(
+            product in message_lower 
+            for product in ['iphone', 'ipad', 'macbook', 'apple tv', 'airpods', 'apple watch']
+        ) and len(message.split()) <= 3  # Simple, short product mentions
+        
+        # Check if this looks like a price response (contains price + currency)
+        is_price_response = bool(re.search(r'\d+\s*(?:ntd|dollars?|usd)', message_lower)) and (
+            'bought' in message_lower or 'paid' in message_lower or 'cost' in message_lower or 'for' in message_lower
+        )
+        
+        if (has_references or is_simple_product_name or is_price_response) and history:
+            # Check recent conversation for context
+            for msg in reversed(history[-3:]):  # Check last 3 messages
+                agent_response = msg.get('agent_response', {})
+                
+                # If system recently asked for product and this looks like a product answer
+                if is_simple_product_name and agent_response.get('follow_up_needed'):
+                    response_text = agent_response.get('message', '').lower()
+                    if 'product' in response_text or 'item' in response_text:
+                        # This is likely a product name in response to system question
+                        for product in ['iphone', 'ipad', 'macbook', 'apple tv', 'airpods', 'apple watch']:
+                            if product in message_lower:
+                                context_data['product_name'] = message.strip()  # Use exact user input
+                                context_data['is_followup_response'] = True
+                                break
+                        break
+                
+                # If system recently asked for price and this looks like a price answer
+                if is_price_response and agent_response.get('follow_up_needed'):
+                    response_text = agent_response.get('message', '').lower()
+                    if any(keyword in response_text for keyword in ['price', 'cost', 'paid', 'much']):
+                        # This is a price response to system question
+                        context_data['is_followup_response'] = True
+                        context_data['responding_to'] = 'price_question'
+                        break
+                
+                # Handle other references 
+                if has_references:
+                    user_msg = msg.get('user_message', '').lower()
+                    # Extract product names from history
+                    for product_pattern in ['iphone', 'ipad', 'macbook', 'apple tv', 'airpods', 'apple watch']:
+                        if product_pattern in user_msg:
+                            context_data['product_name'] = product_pattern.title()
+                            break
+                    
+                    # If we found context, break
+                    if context_data:
+                        break
+        
+        return context_data
     
     def route_request(self, user_intent: UserIntent, session_id: str = None) -> Dict[str, Any]:
         """
@@ -281,33 +392,53 @@ class MCPCoordinator:
     
     def _get_next_question(self, missing_fields: List[str]) -> str:
         """Generate the next question to ask based on missing information."""
-        question_map = {
-            'product_name': "What product would you like to return?",
-            'purchase_location': "Where did you purchase this item?",
-            'purchase_price': "How much did you pay for it?",
-            'return_reason': "What's the reason for the return?"
+        # More natural and empathetic question templates
+        question_templates = {
+            'product_name': [
+                "I'd be happy to help with your return. What product are you looking to return?",
+                "Sure thing! Which item would you like to return?",
+                "I can help you with that. What product needs to be returned?"
+            ],
+            'purchase_location': [
+                "To process your return efficiently, could you let me know where you purchased this item?",
+                "Which store or website did you buy this from?",
+                "Where did you originally purchase this product?"
+            ],
+            'purchase_price': [
+                "got it. Sorry to hear that. Can you also tell me how much you bought it for?",
+                "Thanks for the details. How much did you pay for it?",
+                "I understand. What was the purchase price?"
+            ],
+            'return_reason': [
+                "I'm sorry you're having issues. Could you tell me what's wrong with the product?",
+                "What seems to be the problem with your purchase?",
+                "What's prompting you to return this item?"
+            ]
         }
         
         if missing_fields:
-            return question_map.get(missing_fields[0], "Could you provide more details?")
+            field = missing_fields[0]
+            if field in question_templates:
+                import random
+                return random.choice(question_templates[field])
+            return "Could you provide a bit more information to help me assist you better?"
         
         return ""
     
     def handle_greeting(self, message: str) -> AgentResponse:
-        """Handle greeting messages."""
-        greetings = [
-            "Hi! I'm here to help you with returns and warranty insights. How can I assist you today?",
-            "Hello! I can help you return items or analyze return data. What would you like to do?",
-            "Hi there! I'm your returns and warranty assistant. How may I help you?"
-        ]
+        """Handle greeting messages with tone matching the problem requirements."""
+        # Check message content for specific intents within greetings
+        message_lower = message.lower()
         
-        # Simple greeting selection based on message content
-        if "data" in message.lower() or "analysis" in message.lower():
-            response = "Hello! I can help you analyze return data and generate insights. What would you like to know?"
-        elif "return" in message.lower():
-            response = "Hi! I'm here to help you process returns. What item would you like to return?"
+        if "data analysis" in message_lower or "perform some data analysis" in message_lower:
+            # Data analysis greeting - match problem statement exactly
+            response = "sure, what information would you like?"
+        elif "return" in message_lower and not ("data" in message_lower or "analysis" in message_lower):
+            # Return greeting - match problem statement exactly  
+            response = "sure, please provide me with the details of the item and why you are returning it."
         else:
-            response = greetings[0]
+            # Generic greeting
+            response = "Hi! How can I assist you today?"
         
         return AgentResponse(
             success=True,
@@ -343,19 +474,20 @@ class MCPCoordinator:
         """Get current conversation state for a session."""
         return self.conversation_state.get(session_id, {})
     
-    def process_message(self, message: str, session_id: str = None) -> Tuple[UserIntent, Dict[str, Any]]:
+    def process_message(self, message: str, session_id: str = None, conversation_history: List[Dict] = None) -> Tuple[UserIntent, Dict[str, Any]]:
         """
-        Main entry point for processing user messages.
+        Main entry point for processing user messages with context awareness.
         
         Args:
             message: User's natural language input
             session_id: Optional session identifier
+            conversation_history: Previous conversation context
             
         Returns:
             Tuple of (UserIntent, routing_info)
         """
-        # Analyze intent
-        user_intent = self.analyze_intent(message)
+        # Analyze intent with conversation context
+        user_intent = self.analyze_intent(message, conversation_history)
         
         # Route request
         routing_info = self.route_request(user_intent, session_id)
@@ -369,6 +501,142 @@ class MCPCoordinator:
                    f"Target: {routing_info['target_agent']}")
         
         return user_intent, routing_info
+    
+    def generate_smart_suggestions(self, user_intent: UserIntent, agent_response: AgentResponse, 
+                                 conversation_history: List[Dict] = None) -> List[str]:
+        """
+        Generate contextual smart suggestions based on the current conversation state.
+        
+        Args:
+            user_intent: The analyzed user intent
+            agent_response: The agent's response
+            conversation_history: Previous conversation context
+            
+        Returns:
+            List of 3 suggested follow-up messages
+        """
+        suggestions = []
+        
+        # Base suggestions by intent type and agent
+        if user_intent.intent_type == IntentType.GREETING:
+            suggestions = [
+                "I want to return something",
+                "Show me return statistics",
+                "Generate a report for me"
+            ]
+        
+        elif user_intent.intent_type == IntentType.RETURN_SUBMISSION:
+            if agent_response.follow_up_needed:
+                # During return process - suggest completion based on what's actually being asked
+                missing_fields = agent_response.data.get('missing_fields', [])
+                
+                # Check what the system is currently asking for by analyzing the response text
+                response_lower = agent_response.response_text.lower()
+                
+                if 'product' in response_lower and ('what product' in response_lower or 'which item' in response_lower):
+                    # System is asking for product - suggest common products
+                    suggestions = [
+                        "iPhone 14 Pro",
+                        "MacBook Pro", 
+                        "iPad Air"
+                    ]
+                elif 'where' in response_lower and ('purchase' in response_lower or 'bought' in response_lower):
+                    # System is asking for purchase location
+                    suggestions = [
+                        "Apple Store Taipei 101",
+                        "Online store",
+                        "Apple Store Xinyi"
+                    ]
+                elif 'price' in response_lower or 'cost' in response_lower or 'paid' in response_lower:
+                    # System is asking for price
+                    suggestions = [
+                        "Around $1000",
+                        "About 28,000 NTD", 
+                        "It was expensive"
+                    ]
+                elif 'reason' in response_lower or 'problem' in response_lower or 'wrong' in response_lower:
+                    # System is asking for return reason
+                    suggestions = [
+                        "Screen cracked",
+                        "Not working properly",
+                        "Wrong color/size"
+                    ]
+                else:
+                    # Fallback - general return-related suggestions
+                    suggestions = [
+                        "I need help with this",
+                        "Let me explain the issue",
+                        "Can you guide me?"
+                    ]
+            else:
+                # Return completed - suggest logical next actions matching problem context
+                suggestions = [
+                    "How many similar products were returned?",
+                    "Generate a return analysis report", 
+                    "What else can you help me with?"
+                ]
+        
+        elif user_intent.intent_type == IntentType.DATA_ANALYSIS:
+            # After data analysis - suggest deeper insights
+            if 'product_name' in user_intent.extracted_data:
+                product = user_intent.extracted_data['product_name']
+                suggestions = [
+                    f"What causes {product} returns?",
+                    f"Show {product} return trends",
+                    f"Generate {product} analysis report"
+                ]
+            else:
+                suggestions = [
+                    "Which product has most returns?",
+                    "Show me return trends over time",
+                    "What are the main return reasons?"
+                ]
+        
+        elif user_intent.intent_type == IntentType.REPORT_GENERATION:
+            # After report generation - suggest analysis
+            suggestions = [
+                "Analyze the biggest problem areas",
+                "What trends do you see?",
+                "How can we reduce returns?"
+            ]
+        
+        elif user_intent.intent_type == IntentType.UNKNOWN:
+            # Help guide users
+            suggestions = [
+                "I want to return a product",
+                "Show me return statistics",
+                "What can you help me with?"
+            ]
+        
+        # Context-aware enhancement
+        if conversation_history:
+            suggestions = self._enhance_suggestions_with_context(suggestions, conversation_history)
+        
+        # Ensure we always return exactly 3 suggestions
+        return suggestions[:3] if len(suggestions) >= 3 else suggestions + ["Tell me more", "What else can you help with?", "Generate a report"][:3-len(suggestions)]
+    
+    def _enhance_suggestions_with_context(self, base_suggestions: List[str], history: List[Dict]) -> List[str]:
+        """Enhance suggestions based on conversation history."""
+        enhanced = base_suggestions.copy()
+        
+        # Find recently mentioned products
+        recent_products = []
+        for msg in reversed(history[-3:]):  # Last 3 messages
+            user_msg = msg.get('user_message', '').lower()
+            for product in ['iphone', 'ipad', 'macbook', 'apple tv', 'airpods', 'apple watch']:
+                if product in user_msg and product not in recent_products:
+                    recent_products.append(product.title())
+        
+        # Replace generic suggestions with specific ones
+        if recent_products:
+            product = recent_products[0]
+            for i, suggestion in enumerate(enhanced):
+                if "similar" in suggestion.lower():
+                    enhanced[i] = f"How many {product} returns were there?"
+                elif "trend" in suggestion.lower() and "show" in suggestion.lower():
+                    enhanced[i] = f"Show {product} return patterns"
+        
+        return enhanced
 
 
 # Test and demonstration functions

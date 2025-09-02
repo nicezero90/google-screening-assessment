@@ -66,15 +66,12 @@ class ReturnsDatabase:
                 
                 if existing_count == 0:
                     for record in records:
-                        # Convert data types
-                        if 'purchase_price' in record:
-                            record['purchase_price'] = float(record['purchase_price'])
-                        if 'original_price' not in record:
-                            record['original_price'] = record['purchase_price']
+                        # Map official CSV format to our database schema
+                        mapped_record = self._map_csv_record(record)
                         
                         # Insert record
-                        fields = list(record.keys())
-                        values = list(record.values())
+                        fields = list(mapped_record.keys())
+                        values = list(mapped_record.values())
                         placeholders = ','.join(['?'] * len(fields))
                         
                         cursor.execute(f"""
@@ -92,6 +89,65 @@ class ReturnsDatabase:
         except Exception as e:
             logger.error(f"Error loading CSV data: {e}")
             raise
+    
+    def _map_csv_record(self, record: Dict[str, str]) -> Dict[str, Any]:
+        """Map official CSV format to our database schema."""
+        
+        # Check if this is the new official CSV format
+        if 'order_id' in record and 'cost' in record:
+            # Official CSV format mapping
+            mapped = {
+                'product_name': record.get('product', ''),
+                'category': record.get('category', 'Electronics'),
+                'brand': self._infer_brand(record.get('product', '')),
+                'purchase_location': record.get('store_name', ''),
+                'purchase_price': float(record.get('cost', 0)),
+                'purchase_date': None,  # Not provided in official CSV
+                'return_date': record.get('date', ''),
+                'return_reason': record.get('return_reason', ''),
+                'customer_id': f"CUST{record.get('order_id', '000')}",
+                'warranty_status': 'Under Warranty' if record.get('approved_flag', '') == 'Yes' else 'Expired',
+                'original_price': float(record.get('cost', 0)),
+                'discount_percent': 0.0,
+                'notes': f"Approval Status: {record.get('approved_flag', 'Unknown')}"
+            }
+        else:
+            # Legacy format - existing data
+            mapped = {
+                'product_name': record.get('product_name', ''),
+                'category': record.get('category', 'Electronics'),
+                'brand': record.get('brand', 'Unknown'),
+                'purchase_location': record.get('purchase_location', ''),
+                'purchase_price': float(record.get('purchase_price', 0)),
+                'purchase_date': record.get('purchase_date'),
+                'return_date': record.get('return_date', ''),
+                'return_reason': record.get('return_reason', ''),
+                'customer_id': record.get('customer_id', ''),
+                'warranty_status': record.get('warranty_status', 'Under Warranty'),
+                'original_price': float(record.get('original_price', record.get('purchase_price', 0))),
+                'discount_percent': float(record.get('discount_percent', 0)),
+                'notes': record.get('notes', '')
+            }
+        
+        return mapped
+    
+    def _infer_brand(self, product_name: str) -> str:
+        """Infer brand from product name."""
+        product_lower = product_name.lower()
+        
+        # Brand mapping based on common product types
+        if any(keyword in product_lower for keyword in ['iphone', 'ipad', 'macbook', 'apple']):
+            return 'Apple'
+        elif any(keyword in product_lower for keyword in ['samsung', 'galaxy']):
+            return 'Samsung'
+        elif any(keyword in product_lower for keyword in ['dell', 'alienware']):
+            return 'Dell'
+        elif any(keyword in product_lower for keyword in ['hp', 'pavilion']):
+            return 'HP'
+        elif any(keyword in product_lower for keyword in ['sony', 'playstation']):
+            return 'Sony'
+        else:
+            return 'Unknown'
     
     def insert_return(self, return_data: Dict[str, Any]) -> int:
         """Insert a new return record."""

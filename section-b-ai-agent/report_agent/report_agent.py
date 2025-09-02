@@ -52,11 +52,16 @@ class ReportAgent:
     4. Provide actionable insights and recommendations
     """
     
-    def __init__(self, db_path: str = None, reports_folder: str = "reports"):
+    def __init__(self, db_path: str = None, reports_folder: str = None):
         """Initialize the report agent."""
         if db_path is None:
             # Use the database from parent directory
             db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "returns_warranty.db")
+        
+        if reports_folder is None:
+            # Use absolute path for reports folder to avoid path issues
+            reports_folder = os.path.join(os.path.dirname(__file__), "reports")
+        
         self.db = ReturnsDatabase(db_path)
         self.excel_generator = SimpleExcelGenerator(reports_folder)
         self.reports_folder = reports_folder
@@ -81,10 +86,12 @@ class ReportAgent:
                 r'(?:over|during)\s+the\s+(?:past|last)\s+(\d+)\s+(day|week|month)s?'
             ],
             'report_request': [
-                r'generate\s+(?:a\s+)?(?:report|excel|spreadsheet)',
-                r'create\s+(?:a\s+)?(?:report|excel|spreadsheet)',
-                r'download\s+(?:a\s+)?(?:report|excel|spreadsheet)',
-                r'export\s+(?:to\s+)?(?:excel|csv)'
+                r'generate\s+(?:an?\s+)?(?:report|excel|spreadsheet)',
+                r'create\s+(?:an?\s+)?(?:report|excel|spreadsheet)',
+                r'download\s+(?:an?\s+)?(?:report|excel|spreadsheet)',
+                r'export\s+(?:to\s+)?(?:excel|csv)',
+                r'please\s+generate\s+.*(?:report|excel)',
+                r'(?:report|excel).*(?:for\s+)?(?:me\s+)?(?:to\s+)?download'
             ]
         }
     
@@ -348,19 +355,8 @@ class ReportAgent:
             # Generate response
             filename = os.path.basename(report_path)
             
-            response = (
-                f"📋 **Report Generated Successfully!**\n\n"
-                f"I've created a comprehensive Excel report covering {days_back} days of return data:\n\n"
-                f"• **Total Returns**: {analytics_data.get('total_returns', 0)}\n"
-                f"• **Total Loss**: ${analytics_data.get('total_loss', 0):.0f}\n"
-                f"• **Report File**: `{filename}`\n\n"
-                f"The report includes:\n"
-                f"✅ Executive summary with key metrics\n"
-                f"✅ Product breakdown analysis\n"
-                f"✅ Return reason analysis\n"
-                f"✅ Actionable recommendations\n\n"
-                f"📥 **Download Link**: [Click here to download your Excel report](download/{filename})"
-            )
+            # Match the problem statement tone exactly
+            response = f"sure, please click here to download your excel report: download/{filename}"
             
             return AgentResponse(
                 success=True,

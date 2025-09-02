@@ -4,7 +4,20 @@ A sophisticated AI-powered system for processing returns and generating warranty
 
 ## 🚀 Live Demo
 
-**[Access the live demo here](https://your-demo-url.com)** *(Will be updated after deployment)*
+**[🌐 Live Demo](https://your-app-name.railway.app)** | **[🍎 Apple-Style Interface](https://your-app-name.railway.app/test)**
+
+*Links will be updated after deployment*
+
+## 📋 Google Screening Assessment - Section B
+
+This project fulfills the requirements for **Section B - AI Agent Coding (RAG)** of the Google screening assessment:
+
+- ✅ **MCP-style coordinator** with 2 specialized agents
+- ✅ **Retrieval Agent** for return processing and CSV RAG ingestion  
+- ✅ **Report Agent** for analytics and Excel report generation
+- ✅ **GPT-like UI** for natural language interactions
+- ✅ **100 records** from official CSV dataset
+- ✅ **Live demo** with testable online interface
 
 ## ✨ Features
 
@@ -175,19 +188,44 @@ python tests/test_agents_integration.py
 
 ## 🎯 User Interaction Rules
 
-### For optimal results:
+### For optimal results, follow these patterns:
 
-**Return Submissions:**
-- Include product name, purchase location, price, and issue
-- Example: *"iPhone 14 bought at Taipei 101 for 28,000 NTD, screen cracked"*
+#### **Return Submissions:**
+```
+✅ Good: "I want to return an Apple TV bought at Store XYZ for $100, not working"
+✅ Good: "I'd like to return something" (system will guide you)
+❌ Avoid: Incomplete information without context
+```
 
-**Data Analysis:**
-- Specify time periods and products of interest
-- Example: *"iPhone returns in the past month"*
+#### **Data Analysis:**
+```
+✅ Good: "How many headphones were returned in the past 2 weeks?"
+✅ Good: "What are the most common return reasons?"
+❌ Avoid: Vague questions without specific products or timeframes
+```
 
-**Report Requests:**
-- Ask for Excel or CSV exports when needed
-- Example: *"Generate detailed return report for download"*
+#### **Report Requests:**
+```
+✅ Good: "Generate an excel report for me to download"
+✅ Good: "Please create a detailed return analysis report"
+❌ Avoid: Generic "report" without specifying format
+```
+
+## 🧪 **Test Scenarios**
+
+### Scenario 1: Return Processing
+```
+1. "Hi, how are you? I'd like to return something."
+2. "I want to return an Apple TV bought at Store XYZ. USB port not working."
+3. "I bought it for 3000 NTD after 10% discount."
+```
+
+### Scenario 2: Data Analysis & Reporting
+```
+1. "Hi, I'd like to perform some data analysis on items returned."
+2. "How many cameras were returned in the past month?"
+3. "Please generate an excel report for me to download."
+```
 
 ## 🔧 API Endpoints
 

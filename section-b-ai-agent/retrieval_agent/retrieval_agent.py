@@ -98,12 +98,20 @@ class RetrievalAgent:
     def _load_initial_data(self):
         """Load initial sample data into the database."""
         try:
+            # Try to load official CSV first
+            official_csv_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'official_sample.csv')
+            if os.path.exists(official_csv_path):
+                records_loaded = self.db.load_csv_data(official_csv_path)
+                logger.info(f"Loaded {records_loaded} records from official CSV")
+                return
+            
+            # Fallback to original sample data
             csv_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'sample_returns.csv')
             if os.path.exists(csv_path):
                 records_loaded = self.db.load_csv_data(csv_path)
-                logger.info(f"Loaded {records_loaded} initial records")
+                logger.info(f"Loaded {records_loaded} initial records from fallback CSV")
             else:
-                logger.warning(f"Sample CSV not found at {csv_path}")
+                logger.warning(f"No CSV files found for initial data loading")
         except Exception as e:
             logger.error(f"Error loading initial data: {e}")
     
@@ -287,7 +295,7 @@ class RetrievalAgent:
             )
     
     def _generate_confirmation_message(self, record: Dict[str, Any]) -> str:
-        """Generate a confirmation message for a processed return."""
+        """Generate a confirmation message matching the problem statement tone."""
         product = record.get('product_name', 'item')
         location = record.get('purchase_location', 'unknown location')
         price = record.get('purchase_price', 0)
@@ -295,21 +303,17 @@ class RetrievalAgent:
         reason = record.get('return_reason', 'reported issue')
         return_id = record.get('id')
         
-        # Format price information
+        # Calculate original price if discount was applied
         if original_price and original_price != price:
-            price_info = f"{original_price:.0f} NTD (after discount: {price:.0f} NTD)"
+            final_price = original_price
         else:
-            price_info = f"{price:.0f} NTD"
+            final_price = price
         
+        # Format message to match problem statement tone
         confirmation = (
-            f"Got it! I have processed your return request.\n\n"
-            f"📋 **Return Details (ID: {return_id})**\n"
-            f"• Product: {product}\n"
-            f"• Purchase Location: {location}\n"
-            f"• Price: {price_info}\n"
-            f"• Reason: {reason}\n"
-            f"• Status: Return processed successfully\n\n"
-            f"Is there anything else I can help you with? Have a great day!"
+            f"got it. I have inserted a new item for refund which is {product}, "
+            f"purchased at {location} at {final_price:.0f} NTD "
+            f"because {reason.lower()}. Is there anything else I can help you with? Have a great day!"
         )
         
         return confirmation

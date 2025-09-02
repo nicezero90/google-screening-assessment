@@ -26,33 +26,55 @@ from retrieval_agent.retrieval_agent import RetrievalAgent
 from report_agent.report_agent import ReportAgent
 from database_simple import ReturnsDatabase
 
-# Set up logging
+# Configure logging for the application
+# This helps track system behavior and debug issues in production
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
+# Initialize Flask web application
 app = Flask(__name__)
+# Set secret key for session management (should be randomized in production)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+# Limit file upload size to 16MB to prevent abuse
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
 
-# Initialize agents
-coordinator = MCPCoordinator()
-retrieval_agent = RetrievalAgent()
-report_agent = ReportAgent()
-database = ReturnsDatabase()
+# Initialize the MCP-style multi-agent system components
+# These agents work together to process returns and generate insights
+coordinator = MCPCoordinator()        # Routes requests between agents
+retrieval_agent = RetrievalAgent()    # Handles return processing and data retrieval
+report_agent = ReportAgent()          # Handles analytics and report generation
+database = ReturnsDatabase()          # Manages SQLite database operations
 
-# Global conversation sessions
+# Global store for active conversation sessions
+# Each session tracks multi-turn conversations for incomplete return submissions
 conversation_sessions = {}
 
 
 class ConversationManager:
-    """Manages conversation sessions and agent interactions."""
+    """
+    Central conversation management system for the multi-agent application.
+    
+    This class handles:
+    - Session management for multi-turn conversations
+    - Message routing between MCP coordinator and agents
+    - Response formatting for the web interface
+    - Conversation history tracking
+    """
     
     def __init__(self):
+        """Initialize the conversation manager with empty session storage."""
         self.sessions = {}
     
     def get_session_id(self) -> str:
-        """Get or create a session ID."""
+        """
+        Get or create a unique session identifier for the current user.
+        
+        Uses Flask's session management to maintain user sessions across requests.
+        Each session gets a UUID to ensure uniqueness and prevent conflicts.
+        
+        Returns:
+            str: Unique session identifier
+        """
         if 'session_id' not in session:
             session['session_id'] = str(uuid.uuid4())
         return session['session_id']
@@ -65,8 +87,11 @@ class ConversationManager:
             Dictionary with response data
         """
         try:
-            # Analyze intent and route request
-            user_intent, routing_info = coordinator.process_message(message, session_id)
+            # Get conversation history for context
+            conversation_history = self.sessions.get(session_id, {}).get('messages', [])
+            
+            # Analyze intent and route request with context
+            user_intent, routing_info = coordinator.process_message(message, session_id, conversation_history)
             
             logger.info(f"Session {session_id[:8]}: Intent={user_intent.intent_type.value}, "
                        f"Target={routing_info['target_agent']}")
@@ -142,6 +167,12 @@ conversation_manager = ConversationManager()
 def index():
     """Main chat interface."""
     return render_template('index.html')
+
+
+@app.route('/test')
+def test():
+    """Simple test chat interface."""
+    return send_file('test.html')
 
 
 @app.route('/api/chat', methods=['POST'])
