@@ -116,6 +116,9 @@ class ConversationManager:
             else:
                 response = coordinator.handle_unknown(message)
             
+            # Generate smart Try suggestions for better UX
+            try_suggestions = self._generate_try_suggestions(user_intent, response, conversation_history)
+            
             # Format response for web interface
             response_data = {
                 'success': response.success,
@@ -124,7 +127,8 @@ class ConversationManager:
                 'follow_up_needed': response.follow_up_needed,
                 'data': response.data or {},
                 'intent': user_intent.intent_type.value,
-                'confidence': user_intent.confidence
+                'confidence': user_intent.confidence,
+                'try_suggestions': try_suggestions  # Send as separate field for frontend styling
             }
             
             # Store conversation history
@@ -157,6 +161,56 @@ class ConversationManager:
             messages = self.sessions[session_id]['messages']
             return messages[-limit:] if limit else messages
         return []
+    
+    def _generate_try_suggestions(self, user_intent, agent_response, conversation_history: list = None) -> list:
+        """
+        Generate precise Try suggestions - ONLY the exact next user prompt from problem statement.
+        Returns single suggestion that matches the expected conversation flow.
+        """
+        from coordinator.mcp_coordinator import IntentType
+        
+        # Analyze agent response to determine exact next step in problem scenarios
+        response_text = agent_response.response_text.lower()
+        
+        # SCENARIO 1: Return Flow - Exact problem statement sequence
+        if "sure, please provide me with the details" in response_text:
+            # Step 1 → Step 2: Exact prompt from problem statement
+            return ["I want to return an Apple TV that was bought last week at Taipei 101 Apple store. The Apple TV's usb port is not working."]
+        
+        elif ("sorry to hear that" in response_text and "how much" in response_text) or \
+             ("how much did" in response_text and ("pay" in response_text or "cost" in response_text)):
+            # Step 2 → Step 3: Exact price response from problem statement
+            return ["I bought it for 3000 NTD after 10% discount."]
+        
+        # SCENARIO 2: Data Analysis Flow - Exact problem statement sequence  
+        elif "sure, what information would you like" in response_text:
+            # Step 1 → Step 2: Exact iPhone query from problem statement
+            return ["I'd like to know how many iPhones were returned in the past 2 weeks and whether the frequency has increased over the same timeframe."]
+        
+        elif "13" in response_text and "iphone" in response_text and ("15,000" in response_text or "15000" in response_text):
+            # Step 2 → Step 3: Exact report request from problem statement
+            return ["thanks for the insights. Please generate an excel report for me to download that displays the information you mentioned."]
+        
+        # INITIAL SCENARIO SELECTION
+        elif user_intent.intent_type == IntentType.GREETING and agent_response.agent_name == "coordinator":
+            if "assist" in response_text or "help" in response_text:
+                # Show both scenario starting prompts
+                return [
+                    "Hi, how are you? I'd like to return something.",
+                    "Hi, how are you? I'd like to perform some data analysis on the items returned."
+                ]
+        
+        # SCENARIO COMPLETION - Start new scenarios
+        elif "inserted a new item for refund" in response_text or "have a great day" in response_text:
+            # Return completed - suggest starting data analysis scenario
+            return ["Hi, how are you? I'd like to perform some data analysis on the items returned."]
+        
+        elif "click here to download" in response_text and "excel report" in response_text:
+            # Report completed - suggest starting return scenario  
+            return ["Hi, how are you? I'd like to return something."]
+        
+        # No suggestions for other cases to keep it clean
+        return []
 
 
 # Initialize conversation manager
@@ -165,13 +219,19 @@ conversation_manager = ConversationManager()
 
 @app.route('/')
 def index():
-    """Main chat interface."""
+    """Main chat interface - Apple style ChatGPT interface."""
+    return send_file('test.html')
+
+
+@app.route('/welcome')
+def welcome():
+    """Welcome page with feature overview."""
     return render_template('index.html')
 
 
 @app.route('/test')
 def test():
-    """Simple test chat interface."""
+    """Simple test chat interface (same as main)."""
     return send_file('test.html')
 
 
