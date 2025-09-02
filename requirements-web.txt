@@ -1,0 +1,6 @@
+# Production dependencies for web deployment
+flask>=2.3.0
+gunicorn>=20.1.0
+
+# For deployment, we keep only essential dependencies
+# No pandas/numpy to reduce slug size - using built-in CSV handling only

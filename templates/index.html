@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - Returns & Warranty Insights{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Welcome Message -->
+    <div id="welcomeMessage" class="welcome-message">
+        <div class="welcome-content">
+            <h2>👋 Welcome to Returns & Warranty Insights</h2>
+            <p>I'm your AI assistant for processing returns and analyzing warranty data. I can help you with:</p>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>📦 Process Returns</h3>
+                    <p>Submit new return requests by telling me about the item and issue</p>
+                    <div class="example">
+                        <strong>Try:</strong> "I'd like to return an Apple TV I bought last week"
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Data Analysis</h3>
+                    <p>Get insights and trends from your return data</p>
+                    <div class="example">
+                        <strong>Try:</strong> "How many iPhones were returned in the past month?"
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <h3>📋 Generate Reports</h3>
+                    <p>Create downloadable Excel reports with detailed analysis</p>
+                    <div class="example">
+                        <strong>Try:</strong> "Generate an Excel report for me"
+                    </div>
+                </div>
+            </div>
+            <div class="user-rules">
+                <h4>💡 Tips for optimal results:</h4>
+                <ul>
+                    <li><strong>For returns:</strong> Include product name, purchase location, price, and the specific issue</li>
+                    <li><strong>For data analysis:</strong> Be specific about time periods and products you're interested in</li>
+                    <li><strong>For reports:</strong> Ask for Excel or CSV exports when you need downloadable data files</li>
+                    <li><strong>Multi-turn conversations:</strong> The system will ask follow-up questions if information is missing</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="chatMessages" class="chat-messages">
+        <!-- Messages will be dynamically added here -->
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input-container">
+        <form id="chatForm" class="chat-form">
+            <div class="input-wrapper">
+                <textarea 
+                    id="messageInput" 
+                    placeholder="Ask me about returns, data analysis, or request reports..."
+                    rows="1"
+                    maxlength="1000"
+                    required
+                ></textarea>
+                <button type="submit" class="send-btn" id="sendBtn">
+                    <span class="icon-send"></span>
+                </button>
+            </div>
+        </form>
+        <div class="input-footer">
+            <span class="character-count" id="charCount">0/1000</span>
+        </div>
+    </div>
+</div>
+
+<!-- Message Templates -->
+<template id="userMessageTemplate">
+    <div class="message user-message">
+        <div class="message-avatar">
+            <span class="icon-user"></span>
+        </div>
+        <div class="message-content">
+            <div class="message-text"></div>
+            <div class="message-time"></div>
+        </div>
+    </div>
+</template>
+
+<template id="agentMessageTemplate">
+    <div class="message agent-message">
+        <div class="message-avatar">
+            <span class="icon-robot"></span>
+        </div>
+        <div class="message-content">
+            <div class="message-header">
+                <span class="agent-name"></span>
+                <span class="intent-badge"></span>
+            </div>
+            <div class="message-text"></div>
+            <div class="message-actions"></div>
+            <div class="message-time"></div>
+        </div>
+    </div>
+</template>
+
+<template id="downloadLinkTemplate">
+    <div class="download-link">
+        <a href="#" class="btn btn-primary download-btn">
+            <span class="icon-download"></span>
+            <span class="download-text">Download Report</span>
+        </a>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize chat functionality when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeChat();
+    loadConversationHistory();
+});
+</script>
+{% endblock %}

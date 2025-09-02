@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Returns & Warranty Insights{% endblock %}</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons (using simple Unicode for now, can be replaced with icon fonts) -->
+    <style>
+        .icon-send:before { content: '→'; }
+        .icon-clear:before { content: '🗑️'; }
+        .icon-download:before { content: '📥'; }
+        .icon-stats:before { content: '📊'; }
+        .icon-robot:before { content: '🤖'; }
+        .icon-user:before { content: '👤'; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="app-title">
+                        <span class="icon-robot"></span>
+                        Returns & Warranty Insights
+                    </h1>
+                    <span class="app-subtitle">AI-Powered Return Analysis System</span>
+                </div>
+                <div class="header-right">
+                    <button id="statsBtn" class="btn btn-outline">
+                        <span class="icon-stats"></span> Stats
+                    </button>
+                    <button id="clearBtn" class="btn btn-outline">
+                        <span class="icon-clear"></span> Clear
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Processing your request...</p>
+            </div>
+        </div>
+
+        <!-- Stats Modal -->
+        <div id="statsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>System Statistics</h2>
+                    <button class="modal-close" onclick="closeStatsModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="statsContent">
+                    <!-- Stats content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

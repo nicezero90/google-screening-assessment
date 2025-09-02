@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - Returns & Warranty Insights{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-content">
+        <h1 class="error-code">500</h1>
+        <h2 class="error-title">Server Error</h2>
+        <p class="error-description">
+            Something went wrong on our end. Please try again later.
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <span class="icon-robot"></span>
+                Back to Chat
+            </a>
+            <button onclick="window.location.reload()" class="btn btn-outline">
+                Refresh Page
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
