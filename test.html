@@ -299,6 +299,43 @@
             100% { transform: rotate(360deg); }
         }
         
+        /* Try suggestions styling */
+        .try-suggestions {
+            margin: 12px 0 0 0;
+            padding: 12px 0 0 0;
+            border-top: 1px solid var(--apple-gray-2);
+        }
+        
+        .try-suggestion-bubble {
+            display: inline-block;
+            background: var(--apple-gray-1);
+            border: 1px solid var(--apple-gray-3);
+            border-radius: var(--apple-radius-medium);
+            padding: 8px 14px;
+            margin: 6px 6px 6px 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--apple-blue);
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            max-width: calc(100% - 12px);
+            word-break: break-word;
+            user-select: none;
+        }
+        
+        .try-suggestion-bubble:hover {
+            background: var(--apple-blue);
+            color: white;
+            border-color: var(--apple-blue);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+        }
+        
+        .try-suggestion-bubble:active {
+            transform: translateY(0px);
+            box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+        }
+        
         /* Apple-style welcome message */
         .welcome-message {
             background: var(--apple-system-background);
@@ -469,8 +506,20 @@
                 // Remove loading message
                 document.getElementById(`loading-${loadingId}`)?.remove();
                 
-                // Display agent response with metadata (no suggestion bubbles)
+                // Display agent response with Try suggestions
                 const responseTimestamp = new Date().toLocaleTimeString();
+                
+                // Generate Try suggestions HTML
+                let trySuggestionsHtml = '';
+                if (data.try_suggestions && data.try_suggestions.length > 0) {
+                    trySuggestionsHtml = `
+                        <div class="try-suggestions">
+                            ${data.try_suggestions.map(suggestion => 
+                                `<div class="try-suggestion-bubble" onclick="sendSuggestion('${escapeHtml(suggestion)}')">${escapeHtml(suggestion)}</div>`
+                            ).join('')}
+                        </div>
+                    `;
+                }
                 
                 messages.innerHTML += `
                     <div class="message agent-message">
@@ -484,6 +533,7 @@
                             `<br><a href="/download/${data.data.filename}" target="_blank">📥 Download Report</a>` : 
                             ''
                         }
+                        ${trySuggestionsHtml}
                     </div>
                 `;
                 
@@ -553,13 +603,27 @@
         
         
         /**
+         * Handle Try suggestion bubble clicks
+         * Automatically sends the suggested message
+         */
+        function sendSuggestion(suggestionText) {
+            const input = document.getElementById('messageInput');
+            
+            // Set the suggestion as input value
+            input.value = suggestionText;
+            
+            // Trigger the send message function
+            sendMessage();
+        }
+        
+        /**
          * Test helper function - can be called from browser console
          * Usage: testSampleMessages();
          */
         function testSampleMessages() {
             const samples = [
                 "Hello, I'd like to return something",
-                "How many iPhones were returned in the past 2 weeks?",
+                "How many iPhones were returned in the past 2 weeks?", 
                 "Generate an Excel report for me"
             ];
             
