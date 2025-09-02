@@ -164,90 +164,53 @@ class ConversationManager:
     
     def _generate_try_suggestions(self, user_intent, agent_response, conversation_history: list = None) -> list:
         """
-        Generate smart Try suggestions that guide users through complete problem statement scenarios.
-        Each suggestion is the exact next user prompt from the problem examples.
+        Generate precise Try suggestions - ONLY the exact next user prompt from problem statement.
+        Returns single suggestion that matches the expected conversation flow.
         """
         from coordinator.mcp_coordinator import IntentType
         
-        # Analyze conversation context to provide perfect next steps
+        # Analyze agent response to determine exact next step in problem scenarios
         response_text = agent_response.response_text.lower()
         
-        # Case 1: Initial greeting responses
+        # SCENARIO 1: Return Flow - Exact problem statement sequence
         if "sure, please provide me with the details" in response_text:
-            # User started return scenario - suggest the exact next prompt from problem statement
+            # Step 1 → Step 2: Exact prompt from problem statement
             return ["I want to return an Apple TV that was bought last week at Taipei 101 Apple store. The Apple TV's usb port is not working."]
         
-        elif "sure, what information would you like" in response_text:
-            # User started data analysis - suggest exact next prompt from problem statement  
-            return ["I'd like to know how many iPhones were returned in the past 2 weeks and whether the frequency has increased over the same timeframe."]
-        
-        # Case 2: Return process flow
-        elif "sorry to hear that" in response_text and "how much" in response_text:
-            # System asked for price - suggest exact problem statement response
+        elif ("sorry to hear that" in response_text and "how much" in response_text) or \
+             ("how much did" in response_text and ("pay" in response_text or "cost" in response_text)):
+            # Step 2 → Step 3: Exact price response from problem statement
             return ["I bought it for 3000 NTD after 10% discount."]
         
-        elif "what product" in response_text or "which item" in response_text:
-            # System asking for product - suggest from real CSV data
-            return [
-                "I want to return a Camera that I bought online for 650 dollars, it's not working properly",
-                "Laptop from SoMa Market for 1000 dollars, screen is broken", 
-                "Headphones from Harbor Point for 120 dollars, audio cutting out"
-            ]
+        # SCENARIO 2: Data Analysis Flow - Exact problem statement sequence  
+        elif "sure, what information would you like" in response_text:
+            # Step 1 → Step 2: Exact iPhone query from problem statement
+            return ["I'd like to know how many iPhones were returned in the past 2 weeks and whether the frequency has increased over the same timeframe."]
         
-        elif "where did you" in response_text and "purchase" in response_text:
-            # System asking for location - suggest real store names from CSV
-            return ["SoMa Market", "Harbor Point", "Greenfield Center"]
-        
-        elif "how much" in response_text or "price" in response_text:
-            # System asking for price - suggest realistic amounts
-            return [
-                "I paid 650 dollars", 
-                "About 120 dollars",
-                "It cost me 500 dollars"
-            ]
-        
-        # Case 3: After data analysis
-        elif "13" in response_text and "iphone" in response_text and "15,000" in response_text:
-            # System provided iPhone analysis - suggest exact report request from problem
+        elif "13" in response_text and "iphone" in response_text and ("15,000" in response_text or "15000" in response_text):
+            # Step 2 → Step 3: Exact report request from problem statement
             return ["thanks for the insights. Please generate an excel report for me to download that displays the information you mentioned."]
         
-        elif "camera" in response_text and "returns" in response_text:
-            # After camera analysis
-            return [
-                "Please generate an excel report for camera returns",
-                "What are the main reasons for camera returns?",
-                "thanks for the insights. Please generate an excel report for me to download"
-            ]
+        # INITIAL SCENARIO SELECTION
+        elif user_intent.intent_type == IntentType.GREETING and agent_response.agent_name == "coordinator":
+            if "assist" in response_text or "help" in response_text:
+                # Show both scenario starting prompts
+                return [
+                    "Hi, how are you? I'd like to return something.",
+                    "Hi, how are you? I'd like to perform some data analysis on the items returned."
+                ]
         
-        # Case 4: After report generation  
-        elif "click here to download" in response_text:
-            # Report generated - suggest starting new scenarios
-            return [
-                "Hi, how are you? I'd like to return something.",
-                "How many headphones were returned this month?",
-                "What are the top 3 return reasons?"
-            ]
+        # SCENARIO COMPLETION - Start new scenarios
+        elif "inserted a new item for refund" in response_text or "have a great day" in response_text:
+            # Return completed - suggest starting data analysis scenario
+            return ["Hi, how are you? I'd like to perform some data analysis on the items returned."]
         
-        # Default cases based on intent
-        elif user_intent.intent_type == IntentType.GREETING:
-            return [
-                "Hi, how are you? I'd like to return something.",
-                "Hi, how are you? I'd like to perform some data analysis on the items returned."
-            ]
+        elif "click here to download" in response_text and "excel report" in response_text:
+            # Report completed - suggest starting return scenario  
+            return ["Hi, how are you? I'd like to return something."]
         
-        elif user_intent.intent_type == IntentType.DATA_ANALYSIS:
-            return [
-                "How many cameras were returned in the past month?",
-                "What are the most common return reasons?",
-                "Generate an Excel report for me"
-            ]
-        
-        else:
-            return [
-                "Hi, how are you? I'd like to return something.",
-                "How many returns were there this month?",
-                "Generate an Excel report for me"
-            ]
+        # No suggestions for other cases to keep it clean
+        return []
 
 
 # Initialize conversation manager
